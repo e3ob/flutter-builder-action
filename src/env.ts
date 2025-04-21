@@ -1,0 +1,15 @@
+export default {
+  TG_API_ID: process.env.TG_API_ID,
+  TG_API_HASH: process.env.TG_API_HASH,
+  TG_BOT_TOKEN: process.env.TG_BOT_TOKEN,
+  TG_CHAT_ID: process.env.TG_CHAT_ID,
+  DISCORD_WEBHOOK_URL: process.env.DISCORD_WEBHOOK_URL,
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  GITHUB_SHA: process.env.GITHUB_SHA,
+  GITHUB_REF_NAME: process.env.GITHUB_REF_NAME,
+  REPO: process.env.REPO,
+  RELEASE_ID: process.env.RELEASE_ID,
+  RELEASE_VERSION: process.env.RELEASE_VERSION,
+  APK_PATH: process.env.APK_PATH,
+  FILES: process.env.FILES,
+};

@@ -1,0 +1,136 @@
+name: "Github Flutter Builder and Notifier"
+description: "Sends commit builds to any chat in Telegram"
+author: "e3ob"
+inputs:
+  repo:
+    description: "Repository get flutter project from"
+    required: false
+    default: ${{ github.repository }}
+  path:
+    description: "Path to the Flutter project"
+    required: false
+    default: "."
+    type: "string"
+  flutter_version:
+    description: "Flutter version to use"
+    required: false
+    default: "any"
+    type: "string"
+  flutter_channel:
+    description: "Flutter channel to use"
+    required: false
+    default: "stable"
+    type: "string"
+  release_version:
+    description: "Release version to use"
+    required: false
+    default: ""
+    type: "string"
+  discord_webhook_url:
+    description: "Discord webhook url to send notifications"
+    required: false
+    default: ""
+    type: "string"
+  tg_api_id:
+    description: "Telegram API ID"
+    required: false
+    default: ""
+    type: "string"
+  tg_api_hash:
+    description: "Telegram API Hash"
+    required: false
+    default: ""
+    type: "string"
+  tg_bot_token:
+    description: "Telegram Bot Token"
+    required: false
+    default: ""
+    type: "string"
+  tg_chat_id:
+    description: "Telegram Chat ID"
+    required: false
+    default: ""
+    type: "string"
+
+
+runs:
+  using: "composite"
+  steps:
+    - uses: "actions/checkout@v4"
+      with:
+        repository: ${{ inputs.repo }}
+        sparse-checkout: ${{ inputs.path != '.' && inputs.path || null }}
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Generate temp tag if needed
+      id: tag_version
+      if: inputs.release_version == ''
+      shell: bash
+      run: |
+        if [[ "$GITHUB_REF_NAME" == refs/tags/* ]]; then
+        echo "tag_name=${GITHUB_REF_NAME#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+        SHORT_SHA=$(git rev-parse --short HEAD)
+        echo "tag_name=temp-${SHORT_SHA}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        cache: true
+        channel: ${{ inputs.flutter_channel }}
+        flutter-version: ${{ inputs.flutter_version }}
+
+    - name: Install Flutter Dependencies
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        flutter pub get
+
+    - name: Build
+      shell: bash
+      run: |
+        cd ${{ inputs.path }}
+        if [ -z "${{ inputs.release_version }}" ]; then
+          flutter build apk --split-per-abi 
+        else
+          flutter build apk --split-per-abi --release
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ inputs.release_version == '' && steps.tag_version.outputs.tag_name || inputs.release_version }}
+        files: |
+          ${{ github.workspace }}/${{ inputs.path }}/build/app/outputs/flutter-apk/*.apk
+#          ${{ github.workspace }}/${{ inputs.path }}/pub*
+        name: ${{ inputs.release_version == '' && steps.tag_version.outputs.tag_name || inputs.release_version }}
+        repository: ${{ inputs.repo }}
+        generate_release_notes: true
+        make_latest: ${{ inputs.release_version != '' }}
+        prerelease: ${{ inputs.release_version == '' }}
+
+    - name: Notify To Telegram and Discord
+      shell: bash
+      env:
+        APK_PATH: ${{ github.workspace }}/${{ inputs.path }}/build/app/outputs/flutter-apk/
+        FILES: ${{ steps.create_release.outputs.assets }}
+        RELEASE_ID: ${{ steps.create_release.outputs.id }}
+        GITHUB_TOKEN: ${{ github.token }}
+        REPO: ${{ inputs.repo }}
+        TG_API_ID: ${{ inputs.tg_api_id  }}
+        TG_API_HASH: ${{ inputs.tg_api_hash  }}
+        TG_BOT_TOKEN: ${{ inputs.tg_bot_token  }}
+        TG_CHAT_ID: ${{ inputs.tg_chat_id  }}
+        DISCORD_WEBHOOK_URL: ${{ inputs.discord_webhook_url  }}
+        RELEASE_VERSION: ${{ inputs.release_version == '' && steps.tag_version.outputs.tag_name || inputs.release_version }}
+      run: |
+        node ${{ github.action_path }}/dist/index.js
+
+branding:
+  icon: "bell"
+  color: "blue"
