@@ -1,5 +1,5 @@
 name: "Github Flutter Builder and Notifier"
-description: "Sends commit builds to any chat in Telegram"
+description: "Sends commit builds to any chat in Telegram and Discord"
 author: "e3ob"
 inputs:
   repo:

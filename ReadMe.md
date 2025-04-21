@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Notify
     steps:
-      - uses: e3ob/flutter-build-and-notify@v1
+      - uses: e3ob/flutter-builder-action@v1
         with:
           flutter_version: '3.16.3'
           flutter_channel: 'stable'
